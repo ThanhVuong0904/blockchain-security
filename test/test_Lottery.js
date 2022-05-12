@@ -32,5 +32,70 @@ describe('Weak Randomness', () => {
                 );
             });
         });
+
+        describe('With bets close', () => {
+            it('Should revert if a user place a bet', async function () {
+                await this.lottery.endLottery();
+                await expect(this.lottery.placeBet(5, { value: ethers.utils.parseEther('10') })).to.revertedWith(
+                    'Bet are closed',
+                );
+            });
+
+            it('Should allow only the winner to withdraw the price', async function () {
+                await this.lottery.connect(user).placeBet(5, { value: ethers.utils.parseEther('10') });
+                await this.lottery.connect(attacker).placeBet(10, { value: ethers.utils.parseEther('10') });
+                await this.lottery.connect(deployer).placeBet(15, { value: ethers.utils.parseEther('10') });
+
+                let winningNumber;
+
+                await this.lottery.endLottery();
+                winningNumber = await this.lottery.winningNumber();
+
+                console.log('fisrt', winningNumber);
+                while (winningNumber !== 5) {
+                    await this.lottery.endLottery();
+                    winningNumber = await this.lottery.winningNumber();
+                    console.log(winningNumber);
+                }
+
+                await expect(this.lottery.connect(attacker).withdrawPrice()).to.revertedWith('You are not the winner');
+
+                const userInitBalance = await ethers.provider.getBalance(user.address);
+                console.log('userInitBalance', ethers.utils.formatEther(userInitBalance));
+
+                await this.lottery.connect(user).withdrawPrice();
+
+                const userAfterWithdraw = await ethers.provider.getBalance(user.address);
+                console.log('userAfterWithdraw', ethers.utils.formatEther(userAfterWithdraw));
+            });
+        });
+
+        describe.only('Attack', () => {
+            it('A minner cloud guess the number', async function () {
+                await this.lottery.connect(user).placeBet(50, { value: ethers.utils.parseEther('10') });
+                await this.lottery.connect(attacker).placeBet(5, { value: ethers.utils.parseEther('10') });
+                await this.lottery.connect(deployer).placeBet(15, { value: ethers.utils.parseEther('10') });
+
+                await ethers.provider.send('evm_setNextBlockTimestamp', [1652360989]);
+                let winningNumber;
+
+                await this.lottery.endLottery();
+                winningNumber = await this.lottery.winningNumber();
+
+                console.log('fisrt', winningNumber);
+                while (winningNumber !== 5) {
+                    await this.lottery.endLottery();
+                    winningNumber = await this.lottery.winningNumber();
+                    console.log(winningNumber);
+                }
+                console.log(await ethers.provider.getBlock('latest'));
+
+                const attackerInitBalance = await ethers.provider.getBalance(attacker.address);
+                await this.lottery.connect(attacker).withdrawPrice();
+
+                const attackerFinal = await ethers.provider.getBalance(attacker.address);
+                expect(attackerFinal).to.be.gt(attackerInitBalance);
+            });
+        });
     });
 });

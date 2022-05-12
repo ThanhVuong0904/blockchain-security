@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 contract Lottery is Ownable{
      using Address for address payable;
 
-     uint8 winningNumber;
+     uint8 public winningNumber;
      mapping (address => uint8) public bets;
      bool public betsClosed;
      bool public priceToken;
