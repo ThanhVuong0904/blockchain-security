@@ -20,14 +20,12 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, hre) => {
 module.exports = {
     solidity: '0.8.10',
     networks: {
-        dev: {
-            url: 'http://localhost:7545',
-            gasPrice: 20,
-            accounts: {
-                mnemonic: process.env.MNEMONIC,
-                count: 10,
+        hardhat: {
+            initialBaseFeePerGas: 0,
+            mining: {
+                auto: false,
+                interval: 3000,
             },
-            saveDeployments: true,
         },
         bsctest: {
             url: 'https://data-seed-prebsc-2-s2.binance.org:8545',

@@ -7,6 +7,9 @@ describe('Weak Randomness', () => {
         [deployer, attacker, user] = await ethers.getSigners();
         const Lottery = await ethers.getContractFactory('Lottery', deployer);
         this.lottery = await Lottery.deploy();
+
+        const AttackLottery = await ethers.getContractFactory('Attack', attacker);
+        this.attackLottery = await AttackLottery.deploy(this.lottery.address);
     });
 
     describe('Lottery', () => {
@@ -71,7 +74,7 @@ describe('Weak Randomness', () => {
         });
 
         describe.only('Attack', () => {
-            it('A minner cloud guess the number', async function () {
+            it.skip('A minner cloud guess the number', async function () {
                 await this.lottery.connect(user).placeBet(50, { value: ethers.utils.parseEther('10') });
                 await this.lottery.connect(attacker).placeBet(5, { value: ethers.utils.parseEther('10') });
                 await this.lottery.connect(deployer).placeBet(15, { value: ethers.utils.parseEther('10') });
@@ -95,6 +98,20 @@ describe('Weak Randomness', () => {
 
                 const attackerFinal = await ethers.provider.getBalance(attacker.address);
                 expect(attackerFinal).to.be.gt(attackerInitBalance);
+            });
+
+            it('Attack from an attacker contract', async function () {
+                await this.attackLottery.attack({ value: ethers.utils.parseEther('10') });
+                await this.lottery.endLottery();
+
+                await ethers.provider.send('evm_mine');
+
+                const betNumberOfAttacker = await this.lottery.bets(this.attackLottery.address);
+                const winningNumber = await this.lottery.winningNumber();
+                console.log('Attack number', betNumberOfAttacker);
+                console.log('Winning Number', winningNumber);
+
+                expect(betNumberOfAttacker).to.eq(winningNumber);
             });
         });
     });
